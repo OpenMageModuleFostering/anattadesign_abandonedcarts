@@ -30,7 +30,7 @@ $current_year = date( 'Y' );
 if ( isset( $_GET['month'] ) && intval( abs( $_GET['month'] ) ) != 0 ) {
 	$queried_month = intval( abs( $_GET['month'] ) );
 } else {
-	$queried_month = date( 'm' );
+	$queried_month = date( 'n' );
 }
 
 if ( isset( $_GET['year'] ) && intval( abs( $_GET['year'] ) ) != 0 ) {
