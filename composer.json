@@ -1,0 +1,16 @@
+{
+    "name": "OpenMageModuleFostering/AnattaDesign_AbandonedCarts",
+    "type": "magento-module",
+    "license": "GPL",
+    "homepage": "",
+    "description": "Track abandoned carts & show a funnel report to show statistics",
+    "authors": [
+    {
+        "name": "Anatta Design",
+        "email": "nirav@anattadesign.com"
+    }
+],
+    "suggest": {
+        "magento-hackathon/magento-composer-installer": "*"
+    }
+}
