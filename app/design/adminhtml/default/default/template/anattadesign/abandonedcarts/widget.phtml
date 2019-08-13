@@ -68,7 +68,7 @@ if (Mage::helper('anattadesign_abandonedcarts')->isAwesomeCheckoutActive()) {
 		)
 	);
 
-	$table = 'anattadesign_abandonedcarts_statistics';
+	$table = Mage::getSingleton('core/resource')->getTableName( 'anattadesign_abandonedcarts/statistics' );
 } else {
 
 	$steps = array(
@@ -92,7 +92,7 @@ if (Mage::helper('anattadesign_abandonedcarts')->isAwesomeCheckoutActive()) {
 		)
 	);
 
-	$table = 'anattadesign_abandonedcarts_opstatistics';
+	$table = Mage::getSingleton('core/resource')->getTableName( 'anattadesign_abandonedcarts/opstatistics' );
 }
 
 // Add reached & moved values in array
