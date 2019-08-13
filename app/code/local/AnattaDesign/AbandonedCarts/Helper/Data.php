@@ -5,6 +5,8 @@ class AnattaDesign_AbandonedCarts_Helper_Data extends Mage_Core_Helper_Abstract 
 	public function getStatisticsModel() {
 		if ( $this->isAwesomeCheckoutActive() ) {
 			return Mage::getModel( 'anattadesign_abandonedcarts/statistics' );
+		} elseif ( $this->isOneStepCheckoutActive() ) {
+			return Mage::getModel( 'anattadesign_abandonedcarts/osstatistics' );
 		} else {
 			return Mage::getModel( 'anattadesign_abandonedcarts/opstatistics' );
 		}
@@ -12,6 +14,10 @@ class AnattaDesign_AbandonedCarts_Helper_Data extends Mage_Core_Helper_Abstract 
 
 	public function isAwesomeCheckoutActive() {
 		return Mage::getConfig()->getModuleConfig( 'AnattaDesign_AwesomeCheckout' )->is( 'active', 'true' );
+	}
+
+	public function isOneStepCheckoutActive() {
+		return Mage::getConfig()->getModuleConfig( 'Idev_OneStepCheckout' )->is( 'active', 'true' );
 	}
 
 	public function getMessage() {
@@ -25,7 +31,8 @@ class AnattaDesign_AbandonedCarts_Helper_Data extends Mage_Core_Helper_Abstract 
 			$contents = json_decode( $payload, true );
 
 			if ( $contents['status'] == 'success' ) {
-				$message = $this->isAwesomeCheckoutActive() ? $contents['data']['ac'] : $contents['data']['non-ac'];
+				$message_array = $this->isAwesomeCheckoutActive() ? $contents['data_array']['ac'] : $contents['data_array']['non-ac'];
+				$message = $message_array[ array_rand( $message_array ) ];
 				// cache data for 2 days
 				$cache->save( $payload, 'abandonedcart_payload', array( 'abandonedcart' ), 2 * 24 * 60 * 60 );
 			} else {
@@ -33,37 +40,42 @@ class AnattaDesign_AbandonedCarts_Helper_Data extends Mage_Core_Helper_Abstract 
 			}
 		} else {
 			$contents = json_decode( $payload, true );
-			$message = $this->isAwesomeCheckoutActive() ? $contents['data']['ac'] : $contents['data']['non-ac'];
+			$message_array = $this->isAwesomeCheckoutActive() ? $contents['data_array']['ac'] : $contents['data_array']['non-ac'];
+			$message = $message_array[ array_rand( $message_array ) ];
 		}
 
 		return $message;
 	}
 
-	public function getCurrencySymbol() {
-		return Mage::app()->getLocale()->currency( Mage::app()->getStore()->getCurrentCurrencyCode() )->getSymbol();
-	}
-
-	public function getSalesVolume( $year, $month ) {
+	public function getEmailFooter() {
 
 		$cache = Mage::getSingleton( 'core/cache' );
-		$sales_volume = $cache->load( 'abandonedcart_sales_volume_' . $year . '_' . $month );
+		$payload = $cache->load( 'abandonedcart_payload' );
 
-		if ( $sales_volume === false ) {
-			// recalculate
-			$orderTotals = Mage::getModel( 'sales/order' )->getCollection()
-					->addAttributeToFilter( 'status', Mage_Sales_Model_Order::STATE_COMPLETE )
-					->addAttributeToFilter( 'created_at', array( 'from' => date( 'Y-m-01' ) ) )
-					->addAttributeToSelect( 'grand_total' )
-					->getColumnValues( 'grand_total' )
-			;
+		if ( $payload === false ) {
 
-			$sales_volume = array_sum( $orderTotals );
+			$payload = file_get_contents( 'http://api.anattadesign.com/abandonedcart/1alpha/fetch/payload' );
+			$contents = json_decode( $payload, true );
 
-			// cache it
-			$cache->save( $sales_volume, 'abandonedcart_sales_volume_' . $year . '_' . $month, array( 'abandonedcart' ), 24 * 60 * 60 );
+			if ( $contents['status'] == 'success' ) {
+				$email_footer_array = $contents['email_footer'];
+				$email_footer = $email_footer_array[ array_rand( $email_footer_array ) ];
+				// cache data for 2 days
+				$cache->save( $payload, 'abandonedcart_payload', array( 'abandonedcart' ), 2 * 24 * 60 * 60 );
+			} else {
+				$email_footer = false;
+			}
+		} else {
+			$contents = json_decode( $payload, true );
+			$email_footer_array = $contents['email_footer'];
+			$email_footer = $email_footer_array[ array_rand( $email_footer_array ) ];
 		}
 
-		return $sales_volume;
+		// fallback email footer message
+		if ( $email_footer === false )
+			$email_footer = '<p style="text-align:center;padding-bottom:25px;">Sponsored by <a href="https://awesomecheckout.com/?kme=Clicked%20Link&km_Email=MyAB">Awesome Checkout</a> - the highest converting checkout extension for Magento</p>';
+
+		return $email_footer;
 	}
 
 	public function trailingslashit( $string ) {

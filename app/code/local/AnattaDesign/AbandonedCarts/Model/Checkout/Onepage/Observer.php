@@ -25,6 +25,8 @@ class AnattaDesign_AbandonedCarts_Model_Checkout_Onepage_Observer {
 
 		if ( Mage::helper( 'anattadesign_abandonedcarts' )->isAwesomeCheckoutActive() ) {
 			$statistics->saveStepReached( 'shipping', $this->getQuoteId() );
+		} elseif ( Mage::helper( 'anattadesign_abandonedcarts' )->isOneStepCheckoutActive() ) {
+			$statistics->saveStepReached( 'review', $this->getQuoteId() );
 		} else {
 			if ( Mage::getSingleton( 'customer/session' )->isLoggedIn() ) {
 				$statistics->saveStepReached( 'billing', $this->getQuoteId() );
@@ -105,9 +107,25 @@ class AnattaDesign_AbandonedCarts_Model_Checkout_Onepage_Observer {
 		}
 	}
 
+	public function paypalReview() {
+		$statistics = $this->getModel();
+		$statistics->saveStepReached( 'review', $this->getQuoteId() );
+	}
+
+	public function paypalSaveOrder() {
+		$statistics = $this->getModel();
+		$statistics->saveStepMoved( 'review', $this->getQuoteId() );
+	}
+
+	public function finalsaveOrder( $observer ) {
+		$quote_id = $observer->getEvent()->getQuote()->getId();
+		$statistics = $this->getModel();
+		$statistics->saveStepMoved( 'review', $quote_id );
+	}
+
 	protected function _getNextStep( Mage_Core_Controller_Response_Http $response ) {
 		$body = json_decode( $response->getBody() );
-		return $body->goto_section;
+		return isset( $body->goto_section ) ? $body->goto_section : '';
 	}
 
 	protected function _isMovedToNextStep( Mage_Core_Controller_Response_Http $response ) {

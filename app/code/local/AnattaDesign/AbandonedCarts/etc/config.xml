@@ -2,7 +2,7 @@
 <config>
 	<modules>
 		<AnattaDesign_AbandonedCarts>
-			<version>1.1.2</version>
+			<version>1.2.0</version>
 		</AnattaDesign_AbandonedCarts>
 	</modules>
 	<global>
@@ -20,6 +20,9 @@
 					<opstatistics>
 						<table>anattadesign_abandonedcarts_opstatistics</table>
 					</opstatistics>
+					<osstatistics>
+						<table>anattadesign_abandonedcarts_osstatistics</table>
+					</osstatistics>
 				</entities>
 			</anattadesign_abandonedcarts_mysql4>
 		</models>
@@ -44,6 +47,39 @@
 				<class>AnattaDesign_AbandonedCarts_Helper</class>
 			</anattadesign_abandonedcarts>
 		</helpers>
+		<events>
+			<controller_action_layout_generate_blocks_after>
+				<observers>
+					<anattadesign_awesomecheckout_addjs>
+						<!--<type>singleton</type>-->
+						<class>AnattaDesign_AbandonedCarts_Model_Observer</class>
+						<method>addJavascriptBlock</method>
+					</anattadesign_awesomecheckout_addjs>
+				</observers>
+			</controller_action_layout_generate_blocks_after>
+		</events>
+		<template>
+			<email>
+				<anattadesign_abandonedcarts_email_report_template translate="label" module="anattadesign_abandonedcarts">
+					<label>MyAbandonedCarts Weekly Report</label>
+					<file>anattadesign_abandonedcarts/weekly_report.html</file>
+					<type>html</type>
+				</anattadesign_abandonedcarts_email_report_template>
+			</email>
+		</template>
+	</global>
+	<admin>
+		<routers>
+			<abandonedcarts>
+				<use>admin</use>
+				<args>
+					<module>AnattaDesign_AbandonedCarts</module>
+					<frontName>abandonedcarts</frontName>
+				</args>
+			</abandonedcarts>
+		</routers>
+	</admin>
+	<frontend>
 		<translate>
 			<modules>
 				<AnattaDesign_AbandonedCarts>
@@ -54,23 +90,6 @@
 			</modules>
 		</translate>
 		<events>
-			<admin_session_user_login_success>
-				<observers>
-					<anattadesign_abandonedcarts_model_observer>
-						<class>AnattaDesign_AbandonedCarts_Model_Observer</class>
-						<method>uponAdminLogin</method>
-					</anattadesign_abandonedcarts_model_observer>
-				</observers>
-			</admin_session_user_login_success>
-			<controller_action_layout_generate_blocks_after>
-				<observers>
-					<anattadesign_awesomecheckout_addjs>
-						<!--<type>singleton</type>-->
-						<class>AnattaDesign_AbandonedCarts_Model_Observer</class>
-						<method>addJavascriptBlock</method>
-					</anattadesign_awesomecheckout_addjs>
-				</observers>
-			</controller_action_layout_generate_blocks_after>
 			<controller_action_postdispatch_checkout_onepage_index>
 				<observers>
 					<anattadesign_abandonedcarts_checkout_observer>
@@ -80,6 +99,15 @@
 					</anattadesign_abandonedcarts_checkout_observer>
 				</observers>
 			</controller_action_postdispatch_checkout_onepage_index>
+			<controller_action_postdispatch_onestepcheckout_index_index>
+				<observers>
+					<anattadesign_abandonedcarts_checkout_observer>
+						<type>singleton</type>
+						<class>AnattaDesign_AbandonedCarts_Model_Checkout_Onepage_Observer</class>
+						<method>index</method>
+					</anattadesign_abandonedcarts_checkout_observer>
+				</observers>
+			</controller_action_postdispatch_onestepcheckout_index_index>
 			<sales_quote_merge_before>
 				<observers>
 					<anattadesign_abandonedcarts_checkout_observer>
@@ -152,19 +180,35 @@
 					</anattadesign_abandonedcarts_checkout_observer>
 				</observers>
 			</controller_action_postdispatch_checkout_onepage_saveOrder>
+			<controller_action_postdispatch_paypal_express_review>
+				<observers>
+					<anattadesign_abandonedcarts_checkout_observer>
+						<type>singleton</type>
+						<class>AnattaDesign_AbandonedCarts_Model_Checkout_Onepage_Observer</class>
+						<method>paypalReview</method>
+					</anattadesign_abandonedcarts_checkout_observer>
+				</observers>
+			</controller_action_postdispatch_paypal_express_review>
+			<controller_action_postdispatch_paypal_express_placeOrder>
+				<observers>
+					<anattadesign_abandonedcarts_checkout_observer>
+						<type>singleton</type>
+						<class>AnattaDesign_AbandonedCarts_Model_Checkout_Onepage_Observer</class>
+						<method>paypalSaveOrder</method>
+					</anattadesign_abandonedcarts_checkout_observer>
+				</observers>
+			</controller_action_postdispatch_paypal_express_placeOrder>
+			<checkout_type_onepage_save_order_after>
+				<observers>
+					<anattadesign_abandonedcarts_checkout_observer>
+						<type>singleton</type>
+						<class>AnattaDesign_AbandonedCarts_Model_Checkout_Onepage_Observer</class>
+						<method>finalsaveOrder</method>
+					</anattadesign_abandonedcarts_checkout_observer>
+				</observers>
+			</checkout_type_onepage_save_order_after>
 		</events>
-	</global>
-	<admin>
-		<routers>
-			<abandonedcarts>
-				<use>admin</use>
-				<args>
-					<module>AnattaDesign_AbandonedCarts</module>
-					<frontName>abandonedcarts</frontName>
-				</args>
-			</abandonedcarts>
-		</routers>
-	</admin>
+	</frontend>
 	<adminhtml>
 		<translate>
 			<modules>
@@ -182,5 +226,27 @@
 				</anattadesign_abandonedcarts>
 			</updates>
 		</layout>
+		<events>
+			<admin_session_user_login_success>
+				<observers>
+					<anattadesign_abandonedcarts_model_observer>
+						<class>AnattaDesign_AbandonedCarts_Model_Observer</class>
+						<method>uponAdminLogin</method>
+					</anattadesign_abandonedcarts_model_observer>
+				</observers>
+			</admin_session_user_login_success>
+		</events>
 	</adminhtml>
+	<crontab>
+		<jobs>
+			<anattadesign_abandonedcarts>
+				<schedule>
+					<cronexpr>0 6 * * 1</cronexpr>
+				</schedule>
+				<run>
+					<model>anattadesign_abandonedcarts/observer::weeklyEmailReport</model>
+				</run>
+			</anattadesign_abandonedcarts>
+		</jobs>
+	</crontab>
 </config>
