@@ -12,7 +12,8 @@ class AnattaDesign_AbandonedCarts_Model_Observer {
 		// Instead of using getStoreConfig make a direct sql query to bypass magento cache
 		// $is_ping_rescheduled = Mage::getStoreConfig( 'anattadesign_abandonedcarts_ping_rescheduled' );
 		$connection = Mage::getSingleton( 'core/resource' )->getConnection( 'core_read' );
-		$stmt = $connection->query( "SELECT value FROM core_config_data WHERE path='anattadesign_abandonedcarts_ping_rescheduled' AND scope = 'default' AND scope_id = 0 LIMIT 1;" );
+		$table = Mage::getSingleton('core/resource')->getTableName( 'core_config_data' );
+		$stmt = $connection->query( "SELECT value FROM $table WHERE path='anattadesign_abandonedcarts_ping_rescheduled' AND scope = 'default' AND scope_id = 0 LIMIT 1;" );
 		$data = $stmt->fetch();
 		// If $data is false, then that means there is no row in the table, and no ping has been rescheduled
 		if ( $data !== false )
@@ -29,7 +30,8 @@ class AnattaDesign_AbandonedCarts_Model_Observer {
 				return;
 
 			$connection = Mage::getSingleton( 'core/resource' )->getConnection( 'core_read' );
-			$stmt = $connection->query( "SELECT version FROM core_resource WHERE code='anattadesign_abandonedcarts_setup'" );
+			$table = Mage::getSingleton('core/resource')->getTableName( 'core_resource' );
+			$stmt = $connection->query( "SELECT version FROM $table WHERE code='anattadesign_abandonedcarts_setup'" );
 			$data = $stmt->fetch();
 			$version = $data['version'];
 

@@ -78,7 +78,8 @@ class AnattaDesign_AbandonedCarts_Helper_Data extends Mage_Core_Helper_Abstract 
 
 		// Get current version of the extension
 		$connection = Mage::getSingleton( 'core/resource' )->getConnection( 'core_read' );
-		$stmt = $connection->query( "SELECT version FROM core_resource WHERE code='anattadesign_abandonedcarts_setup';" );
+		$table = Mage::getSingleton('core/resource')->getTableName( 'core_resource' );
+		$stmt = $connection->query( "SELECT version FROM $table WHERE code='anattadesign_abandonedcarts_setup';" );
 		$data = $stmt->fetch();
 		$version = $data['version'];
 
@@ -113,7 +114,8 @@ class AnattaDesign_AbandonedCarts_Helper_Data extends Mage_Core_Helper_Abstract 
 			// $ping_rescheduled = Mage::getStoreConfig( 'anattadesign_abandonedcarts_ping_rescheduled' );
 			// Fetch directly from database to bypass Magento config cache.
 			// Its better to bypass cache and make a sql query in favor of performance, sql query is not gonna run up on frontend side, except when all the cache is refreshed & extension is upgraded
-			$stmt = $connection->query( "SELECT value FROM core_config_data WHERE path='anattadesign_abandonedcarts_ping_rescheduled' AND scope = 'default' AND scope_id = 0 LIMIT 1;" );
+			$table = Mage::getSingleton('core/resource')->getTableName( 'core_config_data' );
+			$stmt = $connection->query( "SELECT value FROM $table WHERE path='anattadesign_abandonedcarts_ping_rescheduled' AND scope = 'default' AND scope_id = 0 LIMIT 1;" );
 			$data = $stmt->fetch();
 			if ( $data === false )
 				$ping_rescheduled = 1;
