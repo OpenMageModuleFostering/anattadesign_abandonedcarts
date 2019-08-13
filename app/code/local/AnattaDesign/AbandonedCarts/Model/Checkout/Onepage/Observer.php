@@ -34,6 +34,17 @@ class AnattaDesign_AbandonedCarts_Model_Checkout_Onepage_Observer {
 		}
 	}
 
+	public function merge( $observer ) {
+		try {
+			$this->getModel()->deleteByQuoteId( $observer->getSource()->getID() );
+		} catch ( Exception $e ) {
+			if ( Mage::getIsDeveloperMode() ) {
+				echo $e->getMessage();
+			}
+			Mage::logException( $e );
+		}
+	}
+
 	public function saveMethod( $observer ) {
 		$statistics = $this->getModel();
 		$statistics->saveStepMoved( 'login', $this->getQuoteId() );

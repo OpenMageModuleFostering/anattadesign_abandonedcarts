@@ -5,6 +5,7 @@ class AnattaDesign_AbandonedCarts_Model_Observer {
 	public function uponAdminLogin() {
 		$this->ping();
 		$this->checkLatestVersion();
+		$this->stopTrackingUser();
 	}
 
 	public function ping() {
@@ -34,15 +35,21 @@ class AnattaDesign_AbandonedCarts_Model_Observer {
 
 			if ( $latest->latestVersion != $version ) {
 				Mage::getModel( 'adminnotification/inbox' )
-						->setSeverity( Mage_AdminNotification_Model_Inbox::SEVERITY_NOTICE )
-						->setTitle( "My Abandoned Cart {$latest->latestVersion} is now available" )
-						->setDateAdded( gmdate( 'Y-m-d H:i:s' ) )
-						->setUrl( 'http://www.myabandonedcarts.com/' )
-						->setDescription( 'Your version of My Abandoned Cart is currently not up-to-date. Please <a href="http://www.myabandonedcarts.com/">click here</a> to get the latest version.' )
-						->save();
-				Mage::getModel( 'core/config' )->saveConfig( 'anattadesign_abandonedcart_latest_checked_version', $latest->latestVersion );
+					->setSeverity( Mage_AdminNotification_Model_Inbox::SEVERITY_NOTICE )
+					->setTitle( "My Abandoned Cart {$latest->latestVersion} is now available" )
+					->setDateAdded( gmdate( 'Y-m-d H:i:s' ) )->setUrl( 'http://www.myabandonedcarts.com/' )
+					->setDescription( 'Your version of My Abandoned Cart is currently not up-to-date. Please <a href="http://www.myabandonedcarts.com/">click here</a> to get the latest version.' )
+					->save();
+				Mage::getModel( 'core/config' )
+					->saveConfig( 'anattadesign_abandonedcart_latest_checked_version', $latest->latestVersion );
 			}
 		}
+	}
+
+	public function stopTrackingUser() {
+		$time = 60 * 60 * 24 * 7; // set a cookie for one week
+		$name = Mage::helper( 'anattadesign_abandonedcarts' )->getCookieName();
+		Mage::getModel( 'core/cookie' )->set( $name, 'no', $time, '/', null, null, true );
 	}
 
 	public function addJavascriptBlock( $observer ) {
@@ -54,13 +61,11 @@ class AnattaDesign_AbandonedCarts_Model_Observer {
 
 		$layout = $controller->getLayout();
 		$block = $layout->createBlock( 'core/text' );
-		$block->setText(
-			'<script type="text/javascript">
+		$block->setText( '<script type="text/javascript">
 				var anattadesign_abandonedcarts = {
 					url: "' . Mage::helper( 'adminhtml' )->getUrl( 'abandonedcarts/widget/render/' ) . '"
 				};
-			</script>'
-		);
+			</script>' );
 
 		$layout->getBlock( 'js' )->append( $block );
 	}

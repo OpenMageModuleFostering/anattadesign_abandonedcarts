@@ -1,5 +1,5 @@
 <?php
-if ( !Mage::helper( 'core' )->isModuleEnabled( 'AnattaDesign_AbandonedCarts' ) ) {
+if (!Mage::helper('core')->isModuleEnabled('AnattaDesign_AbandonedCarts')) {
 	die();
 }
 ?>
@@ -25,22 +25,33 @@ $display_month = array(
 	12 => 'December'
 );
 
-$current_year = date( 'Y' );
+$period = isset($_GET['period']) ? $_GET['period'] : '';
 
-if ( isset( $_GET['month'] ) && intval( abs( $_GET['month'] ) ) != 0 ) {
-	$queried_month = intval( abs( $_GET['month'] ) );
-} else {
-	$queried_month = date( 'n' );
-}
-
-if ( isset( $_GET['year'] ) && intval( abs( $_GET['year'] ) ) != 0 ) {
-	$queried_year = intval( abs( $_GET['year'] ) );
-} else {
-	$queried_year = $current_year;
+switch ($period) {
+	case '12h':
+		$queried_date = date('Y-m-d', strtotime('-12 hours'));
+		break;
+	case '24h':
+		$queried_date = date('Y-m-d', strtotime('-24 hours'));
+		break;
+	case '7d':
+		$queried_date = date('Y-m-d', strtotime('-7 days'));
+		break;
+	case '1m':
+		$queried_date = date('Y-m-d', strtotime('-1 month'));
+		break;
+	case '1y':
+		$queried_date = date('Y-m-d', strtotime('-1 year'));
+		break;
+	case '2y':
+		$queried_date = date('Y-m-d', strtotime('-2 years'));
+		break;
+	default:
+		$queried_date = date('Y-m-d', strtotime('-24 hours'));
 }
 
 // Select table name where data is stored
-if ( Mage::helper( 'anattadesign_abandonedcarts' )->isAwesomeCheckoutActive() ) {
+if (Mage::helper('anattadesign_abandonedcarts')->isAwesomeCheckoutActive()) {
 
 	$steps = array(
 		0 => array(
@@ -56,6 +67,7 @@ if ( Mage::helper( 'anattadesign_abandonedcarts' )->isAwesomeCheckoutActive() ) 
 			'step' => 'review'
 		)
 	);
+
 	$table = 'anattadesign_abandonedcarts_statistics';
 } else {
 
@@ -84,16 +96,16 @@ if ( Mage::helper( 'anattadesign_abandonedcarts' )->isAwesomeCheckoutActive() ) 
 }
 
 // Add reached & moved values in array
-$connection = Mage::getSingleton( 'core/resource' )->getConnection( 'core_read' );
-foreach ( $steps as &$step ) {
-	$query = "SELECT sum(reached) as reached, sum(moved) as moved FROM $table WHERE month = $queried_month AND year = $queried_year AND step = '" . $step['step'] . "';";
-	$resource = $connection->query( $query );
+$connection = Mage::getSingleton('core/resource')->getConnection('core_read');
+foreach ($steps as &$step) {
+	$query = "SELECT SUM(reached) as `reached`, SUM(moved) as `moved` FROM `$table` WHERE DATE(date) > '$queried_date' AND `step` = '{$step['step']}';";
+	$resource = $connection->query($query);
 	$fetched_data = $resource->fetch();
-	$step['reached'] = intval( $fetched_data['reached'] );
-	$step['moved'] = intval( $fetched_data['moved'] );
-	$step['loss'] = $step['reached'] == $step['moved'] ? 0 : ( $step['reached'] - $step['moved'] ) * 100 / $step['reached'];
-	unset( $step );
+	$step['reached'] = intval($fetched_data['reached']);
+	$step['moved'] = intval($fetched_data['moved']);
+	$step['loss'] = $step['reached'] == $step['moved'] ? 0 : ($step['reached'] - $step['moved']) * 100 / $step['reached'];
 }
+unset($step);
 
 $step_no = 1;
 $step_names = array(
@@ -106,83 +118,80 @@ $step_names = array(
 );
 
 // adjustments to data
-if ( Mage::helper( 'anattadesign_abandonedcarts' )->isAwesomeCheckoutActive() ) {
+if (Mage::helper('anattadesign_abandonedcarts')->isAwesomeCheckoutActive()) {
 
 } else {
-	// make sure login[reached] is not smaller than billing[reached] (for the sake of funnel)
-	$steps[0]['reached'] = max( $steps[0]['reached'], $steps[1]['reached'] );
+	// This is needed as a user already logged in will never reach the login step
+	// Here we add the appropriate padding (for the sake of the funnel)
+	$diff = $steps[1]['reached'] - $steps[0]['moved'];
+	$steps[0]['reached'] += $diff;
+	$steps[0]['moved'] += $diff;
 	// make sure shipping step which is optional only depicts the loss, so add padding here (for the sake of funnel)
 	$diff = $steps[1]['moved'] - $steps[2]['reached'];
-	$steps[2]['reached']+= $diff;
-	$steps[2]['moved']+= $diff;
+	$steps[2]['reached'] += $diff;
+	$steps[2]['moved'] += $diff;
+}
+
+// let's match the moved of each step to the reached of next step, this will show decent output even in case of
+// manual data changes via phpmyadmin. This won't affect anything if this module doesn't have any conflicts
+for($i = count($steps) - 1; $i >= 0; $i--) {
+	// making sure that moved is never higher than reached
+	if($steps[$i]['moved'] > $steps[$i]['reached'])
+		$steps[$i]['reached'] = $steps[$i]['moved'];
+
+	if($i)
+		$steps[$i-1]['moved'] = $steps[$i]['reached'] = max($steps[$i-1]['moved'], $steps[$i]['reached']);
 }
 
 // calculate abandonment rate & loss for the queried month-year
-$abandonedment_rate = $steps[0]['reached'] == $steps[count( $steps ) - 1]['moved'] ? 0 : round( ( $steps[0]['reached'] - $steps[count( $steps ) - 1]['moved'] ) * 100 / $steps[0]['reached'], 2 );
-$approx_loss = ( Mage::helper( 'anattadesign_abandonedcarts' )->getSalesVolume( $queried_year, $queried_month ) * ( $abandonedment_rate / 100 ) ) / ( 1 - ( $abandonedment_rate / 100 ) );
-$approx_loss = Mage::helper( 'core' )->currency( $approx_loss, true, false );
+$abandonedment_rate = $steps[0]['reached'] == $steps[count($steps) - 1]['moved'] ? 0 : round(($steps[0]['reached'] - $steps[count($steps) - 1]['moved']) * 100 / $steps[0]['reached'], 2);
 
 // Get message to display user
-$message = Mage::helper( 'anattadesign_abandonedcarts' )->getMessage();
+$message = Mage::helper('anattadesign_abandonedcarts')->getMessage();
+$message = is_string($message) ? $message : '';
 ?>
 
 <div id="ac-wrapper">
-	<!--header-->
-	<header id="ac-header">
-		<img class="left" src="<?php echo $this->getSkinUrl( 'anattadesign/abandonedcarts/css/images/logo.jpg' ); ?>" alt="Abandoned Cart"><!--logo-->
-		<!--calender-->
-		<div id="cal-widget" data-month="<?php echo $queried_month; ?>" data-year="<?php echo $queried_year; ?>" class="right">
-			<a class="previous-month" href="#"></a>
-			<span><?php echo $display_month[$queried_month] . ' ' . $queried_year; ?></span>
-			<a class="next-month" href="#"></a>
-		</div>
-		<!--/calender-->
-	</header>
-	<!--/header-->
-	<div id="ac-content">
-		<?php if ( $steps[0]['reached'] == 0 ) { ?>
-			<ul>
-				<li><p class="out-of-data">You will see some data here as soon as we have it.</p></li>
-			</ul>
-		<?php } else { ?>
-			<!--stats list-->
-			<ul>
-				<?php foreach ( $steps as $key => $step ) { ?>
-					<li>
-						<div class="ac-steps left"><span><?php echo $key + 1; ?>&nbsp;</span><?php echo $step_names[$step['step']]; ?></div>
-						<div class="ac-graph left">
-							<center><?php echo $step['reached']; ?></center>
-							<div class="ac-usr-in" style="width:<?php echo $steps[0]['reached'] == 0 ? 0 : round( $step['reached'] * 100 / $steps[0]['reached'], 0 ); ?>px;">
-								<div class="ac-usr-out" style="height:<?php echo round( $step['loss'], 0 ); ?>%"></div>
-							</div>
-							<?php
-							// if on last step, show last 'moved' value i.e. tail of funnel
-							if ( $key == count( $steps ) - 1 )
-								echo '<center>' . $step['moved'] . '<center>';
-							?>
-						</div>
-						<div class="ac-stats left"><div>&nbsp;<?php echo round( $step['loss'], 2 ); ?>&nbsp;%</div></div>
-					</li>
-				<?php } ?>
-			</ul>
-			<!--stats list-->
-		<?php } ?>
-		<!--sidebar-->
-		<div id="ac-sidebar">
-			<div class="ac-notif">
-				<div>
-					<big>NOTIFICATION!</big>
-					<?php echo $message; ?>
-				</div>
-			</div>
-			<div class="ac-side-content">
-				<span>>APPX. LOSS</span>
-				<p>*based on total monthly sales</p>
-				<big><?php echo $approx_loss; ?></big>
-				<p class="btm">TOTAL PERCENTAGE <br/>OF ABANDONMENT</p>
-				<big class="btm"><?php echo $abandonedment_rate; ?>%</big>
+	<div class="abwidget">
+		<h2 class="widget-title">
+			<strong>TIPS!:</strong> <?php echo $message; ?>
+			<a href="http://myabandonedcarts.com/?kme=Clicked%20Link&km_Referrer=Widget" class="myab"></a>
+		</h2>
+
+		<div class="widget-content">
+			<span class="checkout-info item-1">ENTERED CHECKOUT<small><?php echo $steps[0]['reached'] ?></small></span>
+			<span class="checkout-info item-2">COMPLETED CHECKOUT<small><?php echo $steps[count($steps) - 1]['moved'] ?></small></span>
+			<span class="checkout-info item-3">ABANDONMENT RATE<big><?php echo $abandonedment_rate; ?>%</big></span>
+
+			<div class="graph-table">
+				<table width="100%" border="0" cellspacing="0" cellpadding="0">
+					<tr>
+						<?php foreach ($steps as $step) : ?>
+							<td><span class="number"><?php echo $step['reached']; ?></span></td>
+							<?php $total_height = $steps[0]['reached'] ? (($step['reached'] * 100)) / $steps[0]['reached'] : 0; ?>
+							<?php $lost_height = $step['reached'] ? (($step['reached'] - $step['moved']) * 100) / $step['reached'] : 0; ?>
+							<td>
+								<div class="graph" style="height:<?php echo $total_height; ?>%;">
+									<span class="color" style="height: <?php echo $lost_height; ?>%;">
+										<span class="value"><?php echo round($lost_height, 2); ?>%</span>
+									</span>
+								</div>
+							</td>
+						<?php endforeach; ?>
+						<?php $last_step = end($steps); ?>
+						<td><span class="number"><?php echo $last_step['moved']; ?></span></td>
+					</tr>
+					<tr class="steps">
+						<?php $count = 0; ?>
+						<?php foreach ($steps as $index => $step) : ?>
+							<td<?php if ($count) echo ' class="arrow"'; ?>>&nbsp;</td>
+							<?php $count++; ?>
+							<td><span><?php echo $count . '. ' . $step_names[$step['step']]; ?></span></td>
+						<?php endforeach; ?>
+						<td class="last-child">&nbsp;</td>
+					</tr>
+				</table>
 			</div>
 		</div>
-		<!--sidebar-->
 	</div>
 </div>

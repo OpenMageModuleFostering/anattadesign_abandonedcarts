@@ -85,7 +85,7 @@ class AnattaDesign_AbandonedCarts_Helper_Data extends Mage_Core_Helper_Abstract 
 		$ping = array(
 			'version' => $version,
 			'site_name' => Mage::getStoreConfig( 'general/store_information/name' ),
-			'url' => 'http://' . str_replace( array( 'http://', '/index.php/', '/index.php' ), '', Mage::getUrl() ) // making sure the url is in format - http://domain.com/
+			'url' => 'http://' . str_replace( array( 'http://', 'https://', '/index.php/', '/index.php' ), '', Mage::getUrl() ) // making sure the url is in format - http://domain.com/
 		);
 
 		$ping['url'] = Mage::helper( 'anattadesign_abandonedcarts' )->trailingslashit( $ping['url'] );
@@ -122,6 +122,15 @@ class AnattaDesign_AbandonedCarts_Helper_Data extends Mage_Core_Helper_Abstract 
 
 			Mage::getModel( 'core/config' )->saveConfig( 'anattadesign_abandonedcarts_ping_rescheduled', $ping_rescheduled );
 		}
+	}
+
+	public function getCookieName() {
+		return 'anatta_abcart_track';
+	}
+
+	public function canTrackUser() {
+		$cookie = Mage::getModel( 'core/cookie' )->get( $this->getCookieName() );
+		return !( 'no' === trim( $cookie ) );
 	}
 
 }

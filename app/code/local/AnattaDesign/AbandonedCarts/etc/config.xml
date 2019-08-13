@@ -2,7 +2,7 @@
 <config>
 	<modules>
 		<AnattaDesign_AbandonedCarts>
-			<version>1.0.1</version>
+			<version>1.1.0</version>
 		</AnattaDesign_AbandonedCarts>
 	</modules>
 	<global>
@@ -80,6 +80,15 @@
 					</anattadesign_abandonedcarts_checkout_observer>
 				</observers>
 			</controller_action_postdispatch_checkout_onepage_index>
+			<sales_quote_merge_before>
+				<observers>
+					<anattadesign_abandonedcarts_checkout_observer>
+						<type>singleton</type>
+						<class>AnattaDesign_AbandonedCarts_Model_Checkout_Onepage_Observer</class>
+						<method>merge</method>
+					</anattadesign_abandonedcarts_checkout_observer>
+				</observers>
+			</sales_quote_merge_before>
 			<controller_action_postdispatch_checkout_onepage_saveMethod>
 				<observers>
 					<anattadesign_abandonedcarts_checkout_observer>
